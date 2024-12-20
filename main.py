@@ -1,11 +1,23 @@
 from fastapi import FastAPI
-from app.routes import user_router, test_router
+from fastapi.responses import PlainTextResponse
+from app.routes.api_router import api
+from app.routes.user_router import user
+from app.routes.admin_router import admin
 
-app = FastAPI()
+app = FastAPI(
+    title="Cadastro de Prestadores de Serviços",
+    version="0.0.1",
+    description="Protótipo de uma API para gerir um cadastro de prestadores de serviços freelancers. ",
+)
 
-@app.get('/')
-def health_check():
-    return "Ok, it's working"
+app.include_router(admin)
+app.include_router(user)
+app.include_router(api)
 
-app.include_router(user_router)
-app.include_router(test_router)
+@app.get("/", response_class=PlainTextResponse)
+def get_info():
+    return f"{app.title}, versão {app.version}\nDescrição: {app.description}" 
+
+@app.get("/aberto", response_class=PlainTextResponse)
+def rota_aberta():
+    return "Este endpoint é aberto para acesso público"

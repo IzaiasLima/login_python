@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Session
@@ -15,17 +15,45 @@ ALGORITHM = config("ALGORITHM")
 
 crypt_context = CryptContext(schemes=["sha256_crypt"])
 
+invalid_token = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Invalid access token",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+invalid_usr_or_pass = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Invalid username or password",
+)
+
+insufficient_permissions = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="User don't have necessary permissions.",
+)
+
+user_already_exists = HTTPException(
+    status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists"
+)
+
 
 class UserServices:
     def __init__(self, db_session: Session):
         self.db_session = db_session
 
-    def get_user(self):
+    def as_dict(self, rows):
+        dados = [row._asdict() for row in rows]
+        return dados
+
+    def get_user(self, username):
         user_on_db = (
-            self.db_session.query(UserModel).filter_by(username=data["sub"]).first()
+            self.db_session.query(UserModel).filter_by(username=username).first()
         )
         return user_on_db
-    
+
+    def get_users_list(self):
+        users = self.db_session.query(UserModel.id, UserModel.username).all()
+        return self.as_dict(users)
+
     def user_register(self, user: User):
         user_model = UserModel(
             username=user.username, password=crypt_context.hash(user.password)
@@ -34,44 +62,58 @@ class UserServices:
             self.db_session.add(user_model)
             self.db_session.commit()
         except IntegrityError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists"
-            )
+            raise user_already_exists
 
     def user_login(self, user: User, expires_in: int = 30):
-        user_on_db = self.get_user()
+        db_user = self.get_user(user.username)
 
-        if user_on_db is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password",
-            )
+        if db_user is None:
+            raise invalid_usr_or_pass
 
-        if not crypt_context.verify(user.password, user_on_db.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid username or password",
-            )
+        if not crypt_context.verify(user.password, db_user.password):
+            raise invalid_usr_or_pass
 
-        exp = datetime.now(datetime.zone.utc) + timedelta(minutes=expires_in)
-
+        exp = datetime.now(timezone.utc) + timedelta(minutes=expires_in)
         payload = {"sub": user.username, "exp": exp}
+        encoded_payload = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        access_token = {"access_token": encoded_payload, "exp": exp.isoformat()}
+        return access_token
 
-        access_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    def get_user_on_token(authorization):
+        if authorization and authorization.startswith("Bearer "):
+            access_token = authorization.split(" ")[1]
 
-        return {"access_token": access_token, "exp": exp.isoformat()}
+            try:
+                decoded_token = jwt.decode(
+                    access_token, SECRET_KEY, algorithms=[ALGORITHM]
+                )
+            except JWTError:
+                raise invalid_token
+
+            user = decoded_token["sub"]
+
+            if user is None:
+                raise invalid_token
+
+        return user
+
+    def verify_admin(self, access_token):
+        try:
+            decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+        except JWTError:
+            raise invalid_token
+        user = self.get_user(decoded_token["sub"])
+
+        if user is None or user.username != "admin":
+            raise insufficient_permissions
 
     def verify_token(self, access_token):
         try:
-            data = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+            decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         except JWTError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
-            )
+            raise invalid_token
 
-        user_on_db = self.get_user()
+        user = self.get_user(decoded_token["sub"])
 
-        if user_on_db is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token"
-            )
+        if user is None:
+            raise invalid_token
