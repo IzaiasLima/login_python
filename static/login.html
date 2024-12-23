@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="htmx-config" content='{"withCredentials": true}'>
+    <title>Login</title>
+</head>
+
+<body>
+
+    <style>
+        * {
+            margin: 5px;
+        }
+    </style>
+
+    <div class="container">
+        <form id="form">
+            <div>
+                <label for="username">Nome:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div>
+                <label for="password">Senha:</label>
+                <input type="text" id="password" name="password" required>
+            </div>
+            <button type="button" hx-post="/user/login" hx-include="form" hx-swap="outerHTML">Logar</button>
+            <button type="button" hx-post="/user/register" hx-include="form" hx-target="#message">Cadastrar</button>
+        </form>
+    </div>
+
+    <br>
+    <div id="message"></div>
+
+    <br>
+    <a href="#" hx-get="/api/testar" hx-target="#message">Testar</a>
+
+    <br>
+    <a href="/pages/protegida.html">Protegida</a>
+
+    <script src="https://unpkg.com/htmx.org@1.9.10"
+        integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
+        crossorigin="anonymous"></script>
+    <script src="/pages/js/functions.js"></script>
+</body>
+
+</html>

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 from jose import jwt, JWTError
+
 from decouple import config
 from app.db.models import UserModel
 from app.schemas import User
@@ -17,7 +18,7 @@ crypt_context = CryptContext(schemes=["sha256_crypt"])
 
 invalid_token = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Invalid access token",
+    detail="User is not authenticated",
     headers={"WWW-Authenticate": "Bearer"},
 )
 
@@ -28,11 +29,16 @@ invalid_usr_or_pass = HTTPException(
 
 insufficient_permissions = HTTPException(
     status_code=status.HTTP_403_FORBIDDEN,
-    detail="User don't have necessary permissions.",
+    detail="User insufficient permission",
 )
 
 user_already_exists = HTTPException(
     status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists"
+)
+
+
+invalid_user_name = HTTPException(
+    status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user name"
 )
 
 
@@ -54,7 +60,17 @@ class UserServices:
         users = self.db_session.query(UserModel.id, UserModel.username).all()
         return self.as_dict(users)
 
-    def user_register(self, user: User):
+    # registrar usuário do sistema
+    def user_register(self, form_data):
+        user = None
+
+        try:
+            user = User(
+                username=form_data.get("username"), password=form_data.get("password")
+            )
+        except:
+            raise invalid_user_name
+
         user_model = UserModel(
             username=user.username, password=crypt_context.hash(user.password)
         )
@@ -64,6 +80,7 @@ class UserServices:
         except IntegrityError:
             raise user_already_exists
 
+    # logar e devolver o token
     def user_login(self, user: User, expires_in: int = 30):
         db_user = self.get_user(user.username)
 
@@ -73,47 +90,46 @@ class UserServices:
         if not crypt_context.verify(user.password, db_user.password):
             raise invalid_usr_or_pass
 
+        permissions = ["ADMIN"] if user.username == "admin" else []
+
         exp = datetime.now(timezone.utc) + timedelta(minutes=expires_in)
-        payload = {"sub": user.username, "exp": exp}
-        encoded_payload = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-        access_token = {"access_token": encoded_payload, "exp": exp.isoformat()}
+        payload = {"sub": user.username, "permissions": permissions, "exp": exp}
+        access_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
         return access_token
 
-    def get_user_on_token(authorization):
-        if authorization and authorization.startswith("Bearer "):
-            access_token = authorization.split(" ")[1]
+    # obter usuário contido no token
+    def get_user_on_token(self, access_token):
+        token = self.verify_token(access_token)
+        return token.get("sub")
+
+    # verificar se o Usuário contido no token tem perfil ADMIN
+    def verify_user_admin(self, token):
+        user = token.get("sub")
+        permissions = token.get("permissions")
+
+        if user is None or permissions is None:
+            raise insufficient_permissions
+
+        if "ADMIN" not in permissions:
+            raise insufficient_permissions
+
+    # verificar se o token é válido, se o usuário está autenticado
+    def verify_token(self, access_token):
+        if access_token and access_token.startswith("Bearer "):
+            access_token = access_token.split(" ")[1]
 
             try:
-                decoded_token = jwt.decode(
-                    access_token, SECRET_KEY, algorithms=[ALGORITHM]
-                )
+                token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
             except JWTError:
                 raise invalid_token
 
-            user = decoded_token["sub"]
+            user = token.get("sub")
 
             if user is None:
                 raise invalid_token
 
-        return user
+            return token
 
-    def verify_admin(self, access_token):
-        try:
-            decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-        except JWTError:
-            raise invalid_token
-        user = self.get_user(decoded_token["sub"])
-
-        if user is None or user.username != "admin":
-            raise insufficient_permissions
-
-    def verify_token(self, access_token):
-        try:
-            decoded_token = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-        except JWTError:
-            raise invalid_token
-
-        user = self.get_user(decoded_token["sub"])
-
-        if user is None:
+        else:
             raise invalid_token

@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Integer
 from sqlalchemy.orm import declarative_base
+from pydantic import BaseModel
 
 Base = declarative_base()
 
