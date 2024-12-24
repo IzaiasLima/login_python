@@ -8,6 +8,9 @@ class User(BaseModel):
 
     @validator("username")
     def validate_username(cls, value):
-        if not re.match("^([a-z]|[0-9]|@)+$", value):
-            raise ValueError("Username format invalid")
+        padrao = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+        if not bool(re.match(padrao, value)):
+            raise ValueError("Invalid user email")
+        
         return value

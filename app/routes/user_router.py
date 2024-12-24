@@ -3,30 +3,11 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.depends import get_db_session
+from app.depends import get_db_session, get_body
 from app.user_services import UserServices
 from app.schemas import User
-import urllib.parse as html
-import json
 
 user = APIRouter(prefix="/user")
-
-
-async def get_body(req: Request):
-    payload = await req.body()
-    payload = payload.decode("utf8")
-    payload = html.unquote(payload)
-
-    try:
-        body = json.loads(payload)
-    except:
-        try:
-            lista = list(payload.split("&"))
-            body = dict(l.split("=") for l in lista)
-        except:
-            body = {}
-
-    return body
 
 
 @user.post("/register")
@@ -37,7 +18,7 @@ def user_register(
     service = UserServices(db_session=db_session)
     service.user_register(form_data)
     return JSONResponse(
-        content={"message": "Login success"}, status_code=status.HTTP_201_CREATED
+        content={"message": "New user added."}, status_code=status.HTTP_201_CREATED
     )
 
 
@@ -47,7 +28,12 @@ def user_register(
     db_session: Session = Depends(get_db_session),
 ):
     service = UserServices(db_session=db_session)
-    user = User(username=form_user.username, password=form_user.password)
+
+    try:
+        user = User(username=form_user.username, password=form_user.password)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user email")
+
     jwt_token = service.user_login(user=user)
 
     html = '<button type="button" hx-get="/user/logout">Logout</button>'

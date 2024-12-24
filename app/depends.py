@@ -3,6 +3,8 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.db.connection import DBSession
 from app.user_services import UserServices
+import urllib.parse as parse
+import json
 
 
 def get_db_session():
@@ -11,6 +13,23 @@ def get_db_session():
         yield session
     finally:
         session.close()
+
+
+async def get_body(request: Request):
+    payload = await request.body()
+    payload = payload.decode("utf8")
+    payload = parse.unquote(payload)
+
+    try:
+        body = json.loads(payload)
+    except:
+        try:
+            lista = list(payload.split("&"))
+            body = dict(l.split("=") for l in lista)
+        except:
+            body = {}
+
+    return body
 
 
 def token_verifier(request: Request, db_session: Session = Depends(get_db_session)):
