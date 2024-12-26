@@ -15,6 +15,7 @@
         * {
             margin: 3px;
         }
+
         .danger {
             color: #fff;
             background-color: #f00;
@@ -31,22 +32,19 @@
                 <label for="password">Senha:</label>
                 <input type="text" id="password" name="password" required>
             </div>
-            <button type="button" hx-post="/user/login" hx-include="form" hx-target="#form" hx-swap="outerHTML">Logar</button>
+            <button type="button" hx-post="/user/login" hx-include="form" hx-target="#form"
+                hx-swap="outerHTML">Logar</button>
             <button type="button" hx-post="/user/register" hx-include="form" hx-target="#message">Cadastrar</button>
         </form>
     </div>
 
-    <br>
+    <div><br></div>
     <div id="message"></div>
+    <br><br>
 
-    <br>
-    <a href="#" hx-get="/api/user_name" hx-target="#message">Testar</a>
-
-    <br>
-    <a href="/pages/form.html">Cadastrar</a>
-
-    <br>
-    <a href="/pages/protegida.html">Protegida</a>
+    <a href="/pages/cadastrar.html">Cadastrar</a>
+    <a href="#" hx-get="/api/user_name" hx-target="#message">Testar Login</a>
+    <a href="#" hx-get="/admin/users" hx-target="#message">Testar Admin</a>
 
     <script src="https://unpkg.com/htmx.org@1.9.10"
         integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"

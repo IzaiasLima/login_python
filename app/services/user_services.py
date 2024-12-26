@@ -36,11 +36,9 @@ user_already_exists = HTTPException(
     status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists"
 )
 
-
 invalid_user_name = HTTPException(
     status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user name"
 )
-
 
 class UserServices:
     def __init__(self, db_session: Session):
@@ -66,7 +64,7 @@ class UserServices:
 
         try:
             user = User(
-                username=form_data.get("username"), password=form_data.get("password")
+                username=form_data.get("username"), password=form_data.get("password"), permissions=""
             )
         except:
             raise invalid_user_name
@@ -90,7 +88,11 @@ class UserServices:
         if not crypt_context.verify(user.password, db_user.password):
             raise invalid_usr_or_pass
 
-        permissions = ["ADMIN"] if user.username == "admin" else []
+        permissions = []
+
+        if db_user.permissions:
+            for p in db_user.permissions.split(" "):
+                permissions.append(p)
 
         exp = datetime.now(timezone.utc) + timedelta(minutes=expires_in)
         payload = {"sub": user.username, "permissions": permissions, "exp": exp}
@@ -111,7 +113,7 @@ class UserServices:
         if user is None or permissions is None:
             raise insufficient_permissions
 
-        if "ADMIN" not in permissions:
+        if "admin" not in permissions:
             raise insufficient_permissions
 
     # verificar se o token é válido, se o usuário está autenticado

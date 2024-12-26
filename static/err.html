@@ -5,27 +5,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="htmx-config" content='{"withCredentials": true}'>
-    <title>Login</title>
+    <title>Error</title>
 </head>
 
 <body>
+
 
     <style>
         * {
             margin: 3px;
         }
+
         .danger {
             color: #fff;
             background-color: #f00;
         }
     </style>
 
-    <h1> Protegida </h1>
+    <div class="container">
+        <div><br></div>
+        <div class="danger" id="message">User already exists</div>
+        <br><br>
+    </div>
 
-    <a href="#" hx-get="/admin/users">Usuários</a>
-
-    <br>
-    <div id="message"></div>
+    <a href="/pages/form.html">Cadastrar</a>
+    <a href="#" hx-get="/api/user_name" hx-target="#message">Testar Login</a>
+    <a href="#" hx-get="/admin/users" hx-target="#message">Testar Admin</a>
+    <a href="/user/logout">Logout</a>
 
     <script src="https://unpkg.com/htmx.org@1.9.10"
         integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"

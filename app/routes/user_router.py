@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.depends import get_db_session, get_body
-from app.user_services import UserServices
+from app.services.user_services import UserServices
 from app.schemas import User
 
 user = APIRouter(prefix="/user")
@@ -30,8 +30,8 @@ def user_register(
     service = UserServices(db_session=db_session)
 
     try:
-        user = User(username=form_user.username, password=form_user.password)
-    except ValueError as e:
+        user = User(username=form_user.username, password=form_user.password, permissions="")
+    except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user email")
 
     jwt_token = service.user_login(user=user)

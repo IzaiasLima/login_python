@@ -2,7 +2,7 @@ from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.db.connection import DBSession
-from app.user_services import UserServices
+from app.services.user_services import UserServices
 import urllib.parse as parse
 import json
 

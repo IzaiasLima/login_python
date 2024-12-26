@@ -2,7 +2,7 @@ from fastapi import APIRouter, Header, Depends
 from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from app.depends import admin_verifier, get_db_session
-from app.user_services import UserServices
+from app.services.user_services import UserServices
 
 
 admin = APIRouter(prefix="/admin", dependencies=[Depends(admin_verifier)])

@@ -1,14 +1,17 @@
 from fastapi import APIRouter, Request, status, Depends
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from app.depends import token_verifier, get_db_session, get_body
-from app.user_services import UserServices
-from app.member_services import MemberServices
+from app.services.user_services import UserServices
+from app.services.member_services import MemberServices
 
 api = APIRouter(prefix="/api", dependencies=[Depends(token_verifier)])
 
+
 @api.post("/members/add")
-def member_register(request:Request, form_member = Depends(get_body),
+def member_register(
+    request: Request,
+    form_member=Depends(get_body),
     db_session: Session = Depends(get_db_session),
 ):
     print(len(form_member))
@@ -22,6 +25,19 @@ def member_register(request:Request, form_member = Depends(get_body),
     return JSONResponse(
         content={"message": "New member added."}, status_code=status.HTTP_201_CREATED
     )
+
+
+@api.get("/members/exists")
+def member_by_email(request: Request, db_session: Session = Depends(get_db_session)
+):
+    service = MemberServices(db_session)
+    username = get_user_name(request, db_session)
+    member = service.get_member(username)
+
+    if member is None:
+        return PlainTextResponse(username)
+    else:
+        return HTMLResponse("<script>location.href='/pages/err.html'</script>")
 
 
 @api.get("/user_name", response_class=PlainTextResponse)

@@ -5,6 +5,7 @@ import re
 class User(BaseModel):
     username: str
     password: str
+    permissions: str
 
     @validator("username")
     def validate_username(cls, value):

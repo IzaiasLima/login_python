@@ -25,6 +25,7 @@ class UserModel(Base):
     id = Column("id", Integer, primary_key=True, nullable=False, autoincrement=True)
     username = Column("username", String, nullable=False, unique=True)
     password = Column("password", String, nullable=False)
+    permissions = Column("permissions", String, nullable=True)
 
 
 class MembersModel(Base):
